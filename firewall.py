@@ -46,6 +46,7 @@ class Firewall:
     # @pkt: the actual data of the IPv4 packet (including IP header)
     def handle_packet(self, pkt_dir, pkt):
         self.send = True
+        self.country_code = None
         length = ord(pkt[0:1]) & 0x0f
         if ord(pkt[9:10]) in {1,6,17}:
             self.send = self.handle_protocol(pkt_dir, pkt)
@@ -177,6 +178,7 @@ class Firewall:
             cc = l[2]
 
             if (pktip >= startIP) and (pktip <= endIP):
+                self.country_code = cc
                 return cc
             elif (pktip < startIP):
                 right = mid - 1
