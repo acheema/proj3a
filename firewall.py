@@ -31,10 +31,9 @@ class Firewall:
     	print self.rules
 
 
-        g = open('geoipdb.txt')
-        self.geoIP = [h.rstrip('/n') for h in g]
+        geoipdb = open('geoipdb.txt')
+        self.geoIP = [h.strip() for h in geoipdb.readlines()]
         self.geoIP = [h for h in self.geoIP if len(h) > 0]
-        self.geoIP = [h for h in self.geoIP if h[0] != '%']
 
 
 
