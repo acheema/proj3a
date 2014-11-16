@@ -101,9 +101,9 @@ class Firewall:
     				if self.handle_ip(extip, externalip):
     					if self.handle_port(exprt, externalport):
     						if ruleverdict == 'pass':
-    							return True
+                                return True
     						else:
-    							return False
+                                return False
     		elif len(rule) == 3 and self.protocolDict[protocol] == 'udp' and externalport == 53:
     				#Do logic for DNS
 
@@ -135,8 +135,10 @@ class Firewall:
                 ip_addr = ip_prefix_split[0]
                 network_bits = int(ip_prefix_split[1])
                 host_bits = 32 - network_bits
+
+                #Convert ip addresses to 4B ints using struct.unpack before comparing them.
                 min_ip = struct.unpack('!L', socket.inet_aton(ip_addr))[0]
-                max_ip = bin( (2**host_bits - 1) + min_ip)
+                max_ip = int( (2**host_bits - 1) + min_ip)
                 pktip = struct.unpack('!L', socket.inet_aton(pktip))[0]
                 if pktip <= max_ip and pktip >= min_ip:
                     return True
@@ -144,8 +146,45 @@ class Firewall:
 
 
     #Implements binary search for country code.
-    def handle_country(self, pktip):
-        pass
+    def handle_country(self, pktip, mid=0, left=0, right=0):
+
+        #Need to convert IP addresses before being able to compare them. 
+        pktip = struct.unpack('!L', socket.inet_aton(pktip))
+        l = ''
+
+
+        #check some corner cases
+        if len(self.geoIP) == 0:
+            return None
+
+        if len(self.geoIP) == 1:
+            l = self.geoIP[0].split()
+            startIP = struct.unpack('!L', socket.inet_aton(l[0]))
+            endIP = struc.unpack('!L', socket.inet_aton[1])
+            cc = l[2]
+            if (pktip >= startIP) and (pktip <= endIP):
+                return cc
+            else:
+                return None
+
+        #Main loop
+        right = len(self.geoIP) - 1
+        while left <= right:
+            mid = (right - left)  // 2
+            l = self.geoIP[mid].split()
+            startIP = struct.unpack('!L', socket.inet_aton(l[0]))
+            endIP = struc.unpack('!L', socket.inet_aton[1])
+            cc = l[2]
+
+            if (pktip >= startIP) and (pktip <= endIP):
+                return cc
+            elif (pktip < startIP):
+                right = mid - 1
+
+            elif (pktip > endIP):
+                left = mid + 1
+
+        return None
 
 
 
