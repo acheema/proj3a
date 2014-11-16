@@ -119,6 +119,10 @@ class Firewall:
 
         # 2 byte country code
         elif len(ruleip) == 2:
+            if self.handle_country(pktip) != None and ruleip == self.handle_country(pktip):
+                return True
+            else:
+                return False
 
 
         # single IP address
@@ -138,6 +142,12 @@ class Firewall:
                 if pktip <= max_ip and pktip >= min_ip:
                     return True
             return False
+
+
+    #Implements binary search for country code.
+    def handle_country(self, pktip):
+        pass
+
 
 
 
