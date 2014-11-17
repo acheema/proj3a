@@ -64,23 +64,23 @@ class Firewall:
     	src_port = struct.unpack("!H", pkt[20:22])[0]
     	dst_port = struct.unpack("!H", pkt[22:24])[0]
     	protocol = ord(pkt[9:10])
-	dnsnamecopy = None
-	qclasscopy = None
 	qtypecopy = None
+	qclasscopy = None
+	dnsnamecopy = None
     	if self.protocolDict[protocol] == 'udp' and dst_port == 53:
-    		print 'found a dns packet'
+		print 'found a dns packet'
     		dnsHead = (headlength*4)+8
     		qdcount = struct.unpack('!H', pkt[dnsHead+4:dnsHead+6])[0]
     		if qdcount != 1:
     			return False
     		dnsquestionstart = dnsHead+12
     		dnsqname, dnsqnamelen = self.handle_qname(pkt, dnsquestionstart)
-    		dnsnamecopy = dnsqname
+		dnsnamecopy = dnsqname
     		dnsQtypestart = dnsquestionstart + dnsqnamelen
     		qtype = struct.unpack('!H', pkt[dnsQtypestart:dnsQtypestart+2])[0]
-    		qtypecopy = qtype
+		qtypecopy = qtype
     		qclass = struct.unpack('!H', pkt[dnsQtypestart+2:dnsQtypestart+4])[0]
-    		qclasscopy = qclass
+		qclasscopy = qclass
     		if qtype != 1 and qtype != 28:
     			return True
     		if qclass != 1:
@@ -93,46 +93,47 @@ class Firewall:
         elif pkt_dir == PKT_DIR_OUTGOING:
             externalip = dst_ip
             externalport = dst_port
-    	print "external IP: %s, external port: %d" % (externalip, externalport)
-	if len(self.rules) == 0:
-		return True
+    	print "current external IP is %s and external port is %d" % (externalip, externalport)
     	for r in self.rules:
+		print r
     		rule = [t.lower() for t in r.split()]
+		print rule
     		if len(rule) == 4:
     			ruleverdict = rule[0]
     			ruleprotocol = rule[1]
     			extip = rule[2]
     			exprt = rule[3]
-    			print 'ruleprotocol is: %s' % ruleprotocol
-    			print 'protocol is: %s' % self.protocolDict[protocol]
+			print 'ruleprotocol is: %s' % ruleprotocol
+			print 'protocol is: %s' % self.protocolDict[protocol]
     			if self.protocolDict[protocol] != ruleprotocol:
     				continue
     			else:
-    				print 'finding a matched rule'
+				print 'finding a matched rule'
     				if self.handle_ip(extip, externalip):
     					if self.handle_port(exprt, externalport):
     						if ruleverdict == 'pass':
-    							return True
+							return True
     						else:
-    							return False
+							print 'dropping packet'
+							return False
     		elif len(rule) == 3 and self.protocolDict[protocol] == 'udp' and externalport == 53:
     			ruleverdict = rule[0]
     			dns = rule[1]
     			ruledomain = rule[2]
-    			dnsverdict = self.handle_dns(ruleverdict, ruledomain, dnsnamecopy)
-    			if dnsverdict:
-    				return True
-    			else:
-    				return False
-    	print 'GOT TO THE END OF HANDLE PROTOCOL, NO MATCH FOUND'
-    	return True
+			dnsverdict = self.handle_dns(ruleverdict, ruledomain, dnsnamecopy)
+			if dnsverdict:
+				return True
+			else:
+				return False
+	print 'GOT TO THE END OF HANDLE PROTOCOL, NO MATCH FOUND'
+	return True
 
     def handle_dns(self, verdict, domain, pktdomain):
 	matches = None
 	if domain == pktdomain:
 		matches = True
 	elif '*' in domain:
-		if '*' == domain[0] and domain[1:len(domain)] in pktdomain:
+		if '*' == domain[0] and domain[1:len(pktdomain)] in pktdomain:
 			matches = True
 		else:
 			matches = False
@@ -266,3 +267,5 @@ class Firewall:
     			if len(name) > 0:
     				name = name + "."
     	return name, namelen + 1
+
+    # TODO: You may want to add more classes/functions as well.
