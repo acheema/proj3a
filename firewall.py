@@ -64,9 +64,6 @@ class Firewall:
     	src_port = struct.unpack("!H", pkt[20:22])[0]
     	dst_port = struct.unpack("!H", pkt[22:24])[0]
     	protocol = ord(pkt[9:10])
-	dnsnamecopy = None
-	qclasscopy = None
-	qtypecopy = None
     	if self.protocolDict[protocol] == 'udp' and dst_port == 53:
     		print 'found a dns packet'
     		dnsHead = (headlength*4)+8
@@ -75,12 +72,10 @@ class Firewall:
     			return False
     		dnsquestionstart = dnsHead+12
     		dnsqname, dnsqnamelen = self.handle_qname(pkt, dnsquestionstart)
-    		dnsnamecopy = dnsqname
+		#print 'dnsqname was: %s' % dnsqname
     		dnsQtypestart = dnsquestionstart + dnsqnamelen
     		qtype = struct.unpack('!H', pkt[dnsQtypestart:dnsQtypestart+2])[0]
-    		qtypecopy = qtype
     		qclass = struct.unpack('!H', pkt[dnsQtypestart+2:dnsQtypestart+4])[0]
-    		qclasscopy = qclass
     		if qtype != 1 and qtype != 28:
     			return True
     		if qclass != 1:
@@ -93,7 +88,7 @@ class Firewall:
         elif pkt_dir == PKT_DIR_OUTGOING:
             externalip = dst_ip
             externalport = dst_port
-    	print "external IP: %s, external port: %d" % (externalip, externalport)
+    	#print "external IP: %s, external port: %d" % (externalip, externalport)
 	if len(self.rules) == 0:
 		return True
     	for r in self.rules:
@@ -103,8 +98,8 @@ class Firewall:
     			ruleprotocol = rule[1]
     			extip = rule[2]
     			exprt = rule[3]
-    			print 'ruleprotocol is: %s' % ruleprotocol
-    			print 'protocol is: %s' % self.protocolDict[protocol]
+    			#print 'ruleprotocol is: %s' % ruleprotocol
+    			#print 'protocol is: %s' % self.protocolDict[protocol]
     			if self.protocolDict[protocol] != ruleprotocol:
     				continue
     			else:
@@ -119,12 +114,15 @@ class Firewall:
     			ruleverdict = rule[0]
     			dns = rule[1]
     			ruledomain = rule[2]
-    			dnsverdict = self.handle_dns(ruleverdict, ruledomain, dnsnamecopy)
+			dnsqnamecopy = self.handle_qname(pkt, ((headlength*4)+8)+12)[0]
+			print 'sending %s, %s, %s' % (ruleverdict, ruledomain, dnsqnamecopy)
+    			dnsverdict = self.handle_dns(ruleverdict, ruledomain, dnsqnamecopy)
+			print dnsverdict
     			if dnsverdict:
     				return True
     			else:
     				return False
-    	print 'GOT TO THE END OF HANDLE PROTOCOL, NO MATCH FOUND'
+    	#print 'GOT TO THE END OF HANDLE PROTOCOL, NO MATCH FOUND'
     	return True
 
     def handle_dns(self, verdict, domain, pktdomain):
@@ -132,16 +130,21 @@ class Firewall:
 	if domain == pktdomain:
 		matches = True
 	elif '*' in domain:
-		if '*' == domain[0] and domain[1:len(domain)] in pktdomain:
-			matches = True
-		else:
+		if '*' != domain[0]:
 			matches = False
+		else:
+			if domain[1:len(domain)] in pktdomain:
+				matches = True
+	else:
+		matches = None
 	
-	if matches == True and verdict == 'pass':
+	if matches != None:
+		if verdict == 'drop':
+			return False
+		else:
+			return True
+	else:
 		return True
-	elif matches == True and verdict == 'drop':
-		return False
-	return True
 
     def handle_ip(self, ruleip, pktip):
         ruleip = str(ruleip)
@@ -265,4 +268,5 @@ class Firewall:
     			namelen = namelen + currbyte + 1				
     			if len(name) > 0:
     				name = name + "."
+	print "The name returned from handle_qname is: %s" % name
     	return name, namelen + 1
