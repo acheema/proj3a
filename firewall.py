@@ -38,7 +38,7 @@ class Firewall:
 
 
     	f.close()
-        g.close()
+        geoipdb.close()
         # TODO: Load the GeoIP DB ('geoipdb.txt') as well.
         # TODO: Also do some initialization if needed.
 
