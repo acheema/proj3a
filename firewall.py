@@ -196,8 +196,8 @@ class Firewall:
 
         if len(self.geoIP) == 1:
             l = self.geoIP[0].split()
-            startIP = struct.unpack('!L', socket.inet_aton(l[0]))
-            endIP = struc.unpack('!L', socket.inet_aton[1])
+            startIP = struct.unpack('!L', socket.inet_aton(l[0]))[0]
+            endIP = struct.unpack('!L', socket.inet_aton(l[1]))[0]
             cc = l[2].lower()
             if (pktip >= startIP) and (pktip <= endIP):
                 return cc
@@ -211,7 +211,7 @@ class Firewall:
 		#Some shits going on here, not working
             l = self.geoIP[mid].split()
             startIP = struct.unpack('!L', socket.inet_aton(l[0]))[0]
-            endIP = struct.unpack('!L', socket.inet_aton[1])
+            endIP = struct.unpack('!L', socket.inet_aton(l[1]))[0]
             cc = l[2].lower()
 
             if (pktip >= startIP) and (pktip <= endIP):
