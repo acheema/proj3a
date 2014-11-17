@@ -28,7 +28,7 @@ class Firewall:
     		lines = [l for l in lines if len(l) > 0]
     		lines = [l for l in lines if l[0] != "%"]
     		self.rules = lines
-    	print self.rules
+    	#print self.rules
 
 
         geoipdb = open('geoipdb.txt')
@@ -65,7 +65,7 @@ class Firewall:
     	dst_port = struct.unpack("!H", pkt[22:24])[0]
     	protocol = ord(pkt[9:10])
     	if self.protocolDict[protocol] == 'udp' and dst_port == 53:
-    		print 'found a dns packet'
+    		#print 'found a dns packet'
     		dnsHead = (headlength*4)+8
     		qdcount = struct.unpack('!H', pkt[dnsHead+4:dnsHead+6])[0]
     		if qdcount != 1:
@@ -91,6 +91,7 @@ class Firewall:
     	#print "external IP: %s, external port: %d" % (externalip, externalport)
 	if len(self.rules) == 0:
 		return True
+	lastmatch = None
     	for r in self.rules:
     		rule = [t.lower() for t in r.split()]
     		if len(rule) == 4:
@@ -103,28 +104,33 @@ class Firewall:
     			if self.protocolDict[protocol] != ruleprotocol:
     				continue
     			else:
-    				print 'finding a matched rule'
-    				if self.handle_ip(extip, externalip):
-    					if self.handle_port(exprt, externalport):
-    						if ruleverdict == 'pass':
-    							return True
-    						else:
-    							return False
+				#print 'rule export: %s, pkt export: %s' % (exprt, str(externalport))
+    				if self.handle_ip(extip, externalip) and self.handle_port(exprt, externalport):
+					lastmatch = rule
+					#print 'The current lastmatch is %s' % str(lastmatch) 
+					continue
+				else:
+					#print 'we have broke, no more matches found'
+					continue
+
     		elif len(rule) == 3 and self.protocolDict[protocol] == 'udp' and externalport == 53:
     			ruleverdict = rule[0]
     			dns = rule[1]
     			ruledomain = rule[2]
 			dnsqnamecopy = self.handle_qname(pkt, ((headlength*4)+8)+12)[0]
-			print 'sending %s, %s, %s' % (ruleverdict, ruledomain, dnsqnamecopy)
     			dnsverdict = self.handle_dns(ruleverdict, ruledomain, dnsqnamecopy)
 			print dnsverdict
     			if dnsverdict:
     				return True
     			else:
     				return False
-    	#print 'GOT TO THE END OF HANDLE PROTOCOL, NO MATCH FOUND'
-    	return True
-
+    	return self.handle_lastmatch(lastmatch)
+	
+    def handle_lastmatch(self, lastmatch):
+	if lastmatch == None or lastmatch[0] == 'pass':
+		return True
+	elif lastmatch[0] == 'drop':
+		return False
     def handle_dns(self, verdict, domain, pktdomain):
 	matches = None
 	if domain == pktdomain:
@@ -189,7 +195,7 @@ class Firewall:
     def handle_country(self, pktip, mid=0, left=0, right=0):
 
         #Need to convert IP addresses before being able to compare them. 
-        pktip = struct.unpack('!L', socket.inet_aton(pktip))
+        pktip = struct.unpack('!L', socket.inet_aton(pktip))[0]
         l = ''
 
 
@@ -268,5 +274,4 @@ class Firewall:
     			namelen = namelen + currbyte + 1				
     			if len(name) > 0:
     				name = name + "."
-	print "The name returned from handle_qname is: %s" % name
     	return name, namelen + 1
